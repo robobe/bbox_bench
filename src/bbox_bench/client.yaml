@@ -2,3 +2,15 @@
 server_url: http://radxa:8000
 client_host: 10.100.102.15
 metadata_port: 5005
+
+# Relative paths are resolved beside this client.yaml; absolute paths are used directly.
+report_location: reports
+
+# Headerless ground-truth text/CSV: one x,y,width,height box per source frame.
+ground_truth_format:
+  delimiter: ","
+  header: false
+  x: 0
+  y: 1
+  width: 2
+  height: 3

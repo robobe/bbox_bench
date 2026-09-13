@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "run_id": "20260913-184003-feef6bfb",
+  "status": "stopped",
+  "name": "20260913-184003-feef6bfb",
+  "started_at": "2026-09-13T21:40:03+03:00",
+  "ended_at": "2026-09-13T21:40:13+03:00",
+  "dataset": "Ad-hoc source",
+  "source": {
+    "server_path": "/home/radxa/gst-rknn/datasets/Dataset_UAV123_10fps/UAV123_10fps/data_seq/UAV123_10fps/car1",
+    "local_path": "/home/user/datasets/Dataset_UAV123_10fps/UAV123_10fps/data_seq/UAV123_10fps/car1",
+    "original_width": 1280,
+    "original_height": 720
+  },
+  "tracker_size": {
+    "width": 640,
+    "height": 360
+  },
+  "tracker": {
+    "id": "v3-mixed",
+    "label": "NanoTrack V3 mixed",
+    "model": "NanoTrack V3 mixed",
+    "properties": {
+      "enabled": true,
+      "models-dir": "/home/radxa/gst-rknn/models/nanotracker",
+      "precision": "mixed",
+      "resize": "auto"
+    }
+  },
+  "roi": {
+    "x": 303,
+    "y": 234,
+    "width": 46,
+    "height": 48
+  },
+  "playback_fps": "Auto",
+  "ground_truth": {
+    "path": "/home/user/datasets/Dataset_UAV123_10fps/UAV123_10fps/anno/UAV123_10fps/car1_1.txt",
+    "display_path": "Dataset_UAV123_10fps/UAV123_10fps/anno/UAV123_10fps/car1_1.txt",
+    "format": {
+      "delimiter": ",",
+      "header": false,
+      "x": 0,
+      "y": 1,
+      "width": 2,
+      "height": 3
+    }
+  },
+  "client_metrics": {
+    "frames": 197,
+    "elapsed_s": 9.813468076987192,
+    "metadata_losses": 0
+  }
+}

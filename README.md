@@ -28,8 +28,9 @@ from `runtime_root: /home/radxa/gst-rknn` and saves runs below
 
 The Radxa server runs one selected tracker/detector pipeline at a time and sends
 only metadata over UDP. The client decodes its matching local dataset and renders
-the returned ROIs. Run artifacts include the request, pipeline, prediction CSV,
-summary, and ground-truth IoU report when applicable.
+the returned ROIs. For tracker runs, the client saves one local report folder per
+run containing `metadata.json` and raw per-frame `tracker.csv`; a later analysis
+step can compare that data against the ground-truth file recorded in the metadata.
 
 The server browser roots at `$runtime_root/datasets`; by default this is
 `/home/radxa/gst-rknn/datasets`. Configure another runtime location with
