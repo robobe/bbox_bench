@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bbox-bench"
+version = "0.1.0"
+description = "Metadata-paced GStreamer bounding-box benchmark"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["PyYAML>=6.0.2", "loguru>=0.7.3"]
+
+[project.optional-dependencies]
+client = ["numpy>=1.26", "opencv-python>=4.10"]
+server = ["fastapi>=0.115", "uvicorn>=0.34"]
+
+[project.scripts]
+bbox-bench-client = "bbox_bench.client:main"
+bbox-bench-server = "bbox_bench.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bbox_bench"]

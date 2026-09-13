@@ -1,0 +1,4 @@
+# Default desktop client configuration.
+server_url: http://radxa:8000
+client_host: 10.100.102.15
+metadata_port: 5005

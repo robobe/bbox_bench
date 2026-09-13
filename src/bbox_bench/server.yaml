@@ -1,0 +1,55 @@
+# Default Radxa server configuration.
+listen_host: 0.0.0.0
+listen_port: 8000
+runtime_root: /home/radxa/gst-rknn
+results_root: /home/radxa/bbox_bench/runs
+profiles:
+  - id: v3-mixed
+    label: NanoTrack V3 mixed
+    element: rknnnanotrack
+    input_format: BGR
+    requires_roi: true
+    properties: {enabled: true, models-dir: /home/radxa/gst-rknn/models/nanotracker, precision: mixed, resize: auto}
+  - id: v3-int8
+    label: NanoTrack V3 INT8
+    element: rknnnanotrack
+    input_format: BGR
+    requires_roi: true
+    properties: {enabled: true, models-dir: /home/radxa/gst-rknn/models/nanotracker, precision: int8, resize: auto}
+  - id: v3-int8-mmse
+    label: NanoTrack V3 INT8-MMSE
+    element: rknnnanotrack
+    input_format: BGR
+    requires_roi: true
+    properties: {enabled: true, models-dir: /home/radxa/gst-rknn/models/nanotracker, precision: int8-mmse, resize: auto}
+  - id: v1-mixed
+    label: NanoTrack V1 mixed
+    element: rknnnanotracker12
+    input_format: BGR
+    requires_roi: true
+    properties: {enabled: true, models-dir: /home/radxa/gst-rknn/models/nanotracker12, model-version: v1, precision: mixed, resize: auto}
+  - id: v2-mixed
+    label: NanoTrack V2 mixed
+    element: rknnnanotracker12
+    input_format: BGR
+    requires_roi: true
+    properties: {enabled: true, models-dir: /home/radxa/gst-rknn/models/nanotracker12, model-version: v2, precision: mixed, resize: auto}
+  - id: v2-int8
+    label: NanoTrack V2 INT8
+    element: rknnnanotracker12
+    input_format: BGR
+    requires_roi: true
+    properties: {enabled: true, models-dir: /home/radxa/gst-rknn/models/nanotracker12, model-version: v2, precision: int8, resize: auto}
+  - id: yolov8n-int8
+    label: YOLOv8n INT8
+    element: rknnyolov8
+    input_format: RGB
+    requires_roi: false
+    properties: {model: /home/radxa/gst-rknn/models/yolov8/rknn/yolov8n-rk3566-int8.rknn, confidence-threshold: 0.25, nms-iou-threshold: 0.45, max-detections: 100, resize: auto}
+  - id: yolov8n-hybrid-int8
+    label: YOLOv8n hybrid-INT8
+    element: rknnyolov8
+    input_format: RGB
+    requires_roi: false
+    properties: {model: /home/radxa/gst-rknn/models/yolov8/rknn/yolov8n-rk3566-hybrid-int8.rknn, confidence-threshold: 0.25, nms-iou-threshold: 0.45, max-detections: 100, resize: auto}
+datasets: {}
