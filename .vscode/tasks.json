@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "run-server",
+      "type": "shell",
+      "command": "ssh radxa@radxa 'cd /home/radxa/bbox_bench && scripts/run-server.sh'"
+    },
+    {
+      "label": "deploy-server",
+      "type": "shell",
+      "command": "scripts/deploy-radxa.sh",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "run-client",
+      "type": "shell",
+      "command": "env -u VIRTUAL_ENV uv run --extra client bbox-bench-client",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ]
+}

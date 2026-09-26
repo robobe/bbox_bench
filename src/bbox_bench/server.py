@@ -32,6 +32,53 @@ logger.remove()
 logger.add(sys.stderr, colorize=True, format="<green>{time:HH:mm:ss.SSS}</green> | <level>{level:<8}</level> | <cyan>{name}</cyan>:<cyan>{line}</cyan> | <magenta>model={extra[model]}</magenta> | {message}\n{exception}")
 
 
+class Monitor:
+    def __init__(self, config, proc_stat=Path("/proc/stat"), thermal_root=Path("/sys/class/thermal"), devfreq_root=Path("/sys/class/devfreq")):
+        config = config or {}; self.interval = float(config.get("interval_s", 1)); self.thresholds = config.get("thresholds") or {}
+        self.proc_stat, self.thermal_root, self.devfreq_root, self.previous_cpu = proc_stat, thermal_root, devfreq_root, None
+        self.lock, self.stop_event = threading.Lock(), threading.Event(); self.data = self.sample()
+
+    def _read(self, path):
+        try: return Path(path).read_text().strip()
+        except OSError: return None
+
+    def _temperature(self, kind):
+        for zone in self.thermal_root.glob("thermal_zone*"):
+            if self._read(zone / "type") == kind:
+                try: return int(self._read(zone / "temp")) / 1000
+                except (TypeError, ValueError): return None
+        return None
+
+    def _load(self, name):
+        for device in self.devfreq_root.iterdir() if self.devfreq_root.is_dir() else ():
+            if name in (self._read(device / "name") or device.name):
+                value = self._read(device / "load")
+                try: return float(value.split("@", 1)[0])
+                except (AttributeError, ValueError): return None
+        return None
+
+    def _cpu_load(self):
+        line = self._read(self.proc_stat)
+        try: values = [int(value) for value in line.splitlines()[0].split()[1:]]; total, idle = sum(values), values[3] + values[4]
+        except (AttributeError, IndexError, ValueError): return None
+        previous, self.previous_cpu = self.previous_cpu, (total, idle)
+        return None if previous is None or total == previous[0] else round(100 * (1 - (idle - previous[1]) / (total - previous[0])), 1)
+
+    def sample(self):
+        soc, gpu = self._temperature("soc-thermal"), self._temperature("gpu-thermal")
+        values = {"cpu": (self._cpu_load(), soc, "cpu_load_pct", "soc_temp_c"), "gpu": (self._load(".gpu"), gpu, "gpu_load_pct", "gpu_temp_c"), "npu": (self._load(".npu"), soc, "npu_load_pct", "soc_temp_c")}
+        return {name: {"load_pct": load, "temperature_c": temp, "alert": (load is not None and load >= self.thresholds.get(load_limit, 100)) or (temp is not None and temp >= self.thresholds.get(temp_limit, float("inf")))} for name, (load, temp, load_limit, temp_limit) in values.items()}
+
+    def snapshot(self):
+        with self.lock: return self.data.copy()
+
+    def start(self):
+        def run():
+            while not self.stop_event.wait(self.interval):
+                with self.lock: self.data = self.sample()
+        threading.Thread(target=run, daemon=True).start()
+
+
 def gst_value(value):
     if isinstance(value, bool):
         value = str(value).lower()
@@ -253,6 +300,7 @@ class Service:
 def build_app(config_path):
     Gst.init(None)
     service = Service(config_path)
+    monitor = Monitor(service.config.get("monitor")); monitor.start()
     app = FastAPI(title="NanoTracker benchmark")
 
     def command(payload, kind):
@@ -263,7 +311,7 @@ def build_app(config_path):
 
     @app.get("/v1/health")
     def health():
-        return {"ok": True, "active_run": service.active}
+        return {"ok": True, "active_run": service.active, "monitor": monitor.snapshot()}
 
     @app.get("/v1/catalog")
     def catalog():

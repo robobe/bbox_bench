@@ -212,11 +212,14 @@ class Client:
         self.source, self.source_display, self.local_root, self.local_source, self.ground_truth, self.ground_truth_display = tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(); self.dataset, self.tracker, self.rate = tk.StringVar(value="Ad-hoc source"), tk.StringVar(), tk.StringVar(value="Auto")
         saved_root = self.state_document().get("client_dataset_root")
         if isinstance(saved_root, str): self.local_root.set(saved_root)
-        self.saved_run, self.preset_name = tk.StringVar(), tk.StringVar(); self.saved_items = {}; self.server_status, self.status = tk.StringVar(value="Server: connecting"), tk.StringVar(value="Connecting to benchmark server")
+        self.saved_run, self.preset_name = tk.StringVar(), tk.StringVar(); self.saved_items = {}; self.server_status, self.status = tk.StringVar(value="Server: connecting"), tk.StringVar(value="Connecting to benchmark server"); self.monitor_labels = {}
         self.build(); self.load_catalog(); self.root.after(30, self.tick)
 
     def build(self):
-        panel = ttk.Frame(self.root, padding=12); panel.grid(sticky="nsew"); ttk.Label(panel, textvariable=self.server_status).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 8))
+        panel = ttk.Frame(self.root, padding=12); panel.grid(sticky="nsew"); header = ttk.Frame(panel); header.grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 8)); ttk.Label(header, textvariable=self.server_status).grid(row=0, column=0, sticky="w")
+        monitor = tk.Frame(header); monitor.grid(row=1, column=0, sticky="w")
+        for name in ("CPU", "GPU", "NPU"):
+            label = tk.Label(monitor, text=f"{name}: unavailable", fg="gray"); label.pack(side="left", padx=(0, 10)); self.monitor_labels[name.lower()] = label
         ttk.Label(panel, text="Recent / preset").grid(row=1, column=0, sticky="nw", pady=3); saved_frame = ttk.Frame(panel); saved_frame.grid(row=1, column=1, sticky="nsew", pady=3); self.saved_run_list = tk.Listbox(saved_frame, height=4, exportselection=False); saved_scroll = ttk.Scrollbar(saved_frame, orient="vertical", command=self.saved_run_list.yview); self.saved_run_list.configure(yscrollcommand=saved_scroll.set); self.saved_run_list.pack(side="left", fill="both", expand=True); saved_scroll.pack(side="right", fill="y"); self.saved_run_list.bind("<<ListboxSelect>>", lambda _: self.load_saved_run())
         actions = ttk.Frame(panel); actions.grid(row=1, column=2, padx=(6, 0)); ttk.Button(actions, text="Save", command=self.save_preset).pack(fill="x"); ttk.Button(actions, text="Rename", command=self.rename_preset).pack(fill="x", pady=(3, 0)); ttk.Button(actions, text="Clear all", command=self.clear_presets).pack(fill="x", pady=(3, 0))
         labels = ("Preset name", "Client dataset root", "Dataset", "Server source", "Relative folder", "Ground truth", "Profile", "Playback FPS")
@@ -226,6 +229,12 @@ class Client:
         ttk.Entry(panel, textvariable=self.source_display, width=52, state="readonly").grid(row=5, column=1, sticky="ew", pady=3); ttk.Button(panel, text="Browse", command=self.browse_server).grid(row=5, column=2, padx=(6, 0)); ttk.Entry(panel, textvariable=self.local_source, width=52, state="readonly").grid(row=6, column=1, sticky="ew", pady=3)
         self.ground_truth_box = ttk.Entry(panel, textvariable=self.ground_truth_display, width=52, state="readonly"); self.ground_truth_box.grid(row=7, column=1, sticky="ew", pady=3); self.ground_truth_browse = ttk.Button(panel, text="Browse", command=self.choose_ground_truth); self.ground_truth_browse.grid(row=7, column=2, padx=(6, 0)); self.tracker_box = ttk.Combobox(panel, textvariable=self.tracker, state="readonly", width=52); self.tracker_box.grid(row=8, column=1, sticky="ew", pady=3); self.tracker_box.bind("<<ComboboxSelected>>", lambda _: self.profile_changed())
         ttk.Combobox(panel, textvariable=self.rate, values=FPS_CHOICES, state="readonly", width=52).grid(row=9, column=1, sticky="ew", pady=3); self.preview_button = ttk.Button(panel, text="Preview / select ROI", command=self.preview); self.preview_button.grid(row=10, column=0, sticky="ew", pady=(8, 3)); self.inference_preview_button = ttk.Button(panel, text="Preview inference", command=self.preview_inference); self.inference_preview_button.grid(row=10, column=1, sticky="ew", padx=(6, 0), pady=(8, 3)); ttk.Button(panel, text="Start benchmark", command=self.start).grid(row=10, column=2, sticky="ew", padx=(6, 0), pady=(8, 3)); ttk.Button(panel, text="Play source", command=lambda: self.start(True)).grid(row=11, column=0, sticky="ew", pady=3); ttk.Button(panel, text="Show pipeline", command=self.show_pipeline).grid(row=11, column=1, sticky="ew", pady=3); ttk.Button(panel, text="Stop", command=self.stop).grid(row=11, column=2, sticky="ew", padx=(6, 0), pady=3); ttk.Button(panel, text="Analyze report", command=self.open_report_analysis).grid(row=12, column=1, sticky="ew", pady=3); ttk.Label(panel, textvariable=self.status, wraplength=620, justify="left").grid(row=13, column=0, columnspan=3, sticky="ew", pady=(8, 0)); panel.columnconfigure(1, weight=1)
+
+    def update_monitor(self, monitor):
+        for name, label in self.monitor_labels.items():
+            item = monitor.get(name) if isinstance(monitor, dict) else None
+            if not isinstance(item, dict) or item.get("load_pct") is None or item.get("temperature_c") is None: label.configure(text=f"{name.upper()}: unavailable", fg="gray")
+            else: label.configure(text=f"{name.upper()}: {item['load_pct']:.0f}% {item['temperature_c']:.1f}°C", fg="red" if item.get("alert") else "green")
 
     def load_catalog(self):
         try:
@@ -465,10 +474,10 @@ class Client:
         if self.preview_open: cv2.waitKey(1)
         if self.viewer: self.viewer.poll()
         if self.source_only and self.viewer and self.viewer.finished(): self.status.set("Local source finished"); self.viewer.close(); self.viewer = None; self.source_only = False
-        if not self.run_id and now >= self.next_server_check:
+        if now >= self.next_server_check:
             self.next_server_check = now + 2
-            try: self.api.request("GET", "/v1/health", timeout=1.5); self.server_status.set("Server: connected")
-            except RuntimeError: self.server_status.set("Server: unavailable")
+            try: health = self.api.request("GET", "/v1/health", timeout=1.5); self.server_status.set("Server: connected"); self.update_monitor(health.get("monitor"))
+            except RuntimeError: self.server_status.set("Server: unavailable"); self.update_monitor(None)
         if self.run_id and now >= self.next_run_check:
             self.next_run_check = now + .5
             try:
